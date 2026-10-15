@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest cache
+.pytest_cache/
+
+# Local data & temporary test files
+data/
+*.db
+*.db-wal
+*.db-shm
+*.wal
+*.tmp
+status.json
+
+# Logs
+*.log
+!docs/failure_tests.log
+!docs/test_suite.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

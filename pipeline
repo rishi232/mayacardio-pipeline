@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""
+MayaCardio Pipeline CLI.
+
+One single program named `pipeline` on the device, with subcommands:
+  pipeline run
+  pipeline status
+  pipeline export --session ID --from device|cloud
+  pipeline results --session ID
+"""
+
+from __future__ import annotations
+import argparse
+import json
+import os
+import sys
+import urllib.request
+
+# Ensure project root is in sys.path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+from src.device_runner import DevicePipeline
+from src.ledger import LossLedger
+from src.wal import SegmentedWAL
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    data_dir = args.data_dir or os.environ.get("PIPELINE_DATA_DIR", "./data")
+    mock_host = args.mock_host or os.environ.get("MOCK_HOST", "127.0.0.1")
+    mock_port = int(args.mock_port or os.environ.get("MOCK_PORT", "7100"))
+    cloud_url = args.cloud_url or os.environ.get("CLOUD_URL", "http://127.0.0.1:8000")
+    metrics_port = int(args.metrics_port or os.environ.get("METRICS_PORT", "9100"))
+
+    runner = DevicePipeline(
+        data_dir=data_dir,
+        mock_host=mock_host,
+        mock_port=mock_port,
+        cloud_url=cloud_url,
+        metrics_port=metrics_port,
+    )
+    runner.run()
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    data_dir = args.data_dir or os.environ.get("PIPELINE_DATA_DIR", "./data")
+    status_path = os.path.join(data_dir, "status.json")
+
+    mode = "offline"
+    samples_saved = 0
+    samples_in_cloud = 0
+    backlog = 0
+
+    if os.path.exists(status_path):
+        try:
+            with open(status_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                mode = data.get("mode", "offline")
+                samples_saved = data.get("samples_saved", 0)
+                samples_in_cloud = data.get("samples_in_cloud", 0)
+                backlog = data.get("backlog", 0)
+        except Exception:
+            pass
+    else:
+        # Fallback to direct WAL inspection if runner status file not yet generated
+        try:
+            wal = SegmentedWAL(data_dir)
+            samples_saved = wal.count_samples()
+            backlog = samples_saved
+            wal.close()
+        except Exception:
+            pass
+
+    out = {
+        "mode": mode,
+        "samples_saved": samples_saved,
+        "samples_in_cloud": samples_in_cloud,
+        "backlog": backlog,
+    }
+    # Printed as exactly ONE JSON line
+    sys.stdout.write(json.dumps(out) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    session_id = args.session
+    from_source = args.from_source
+    data_dir = args.data_dir or os.environ.get("PIPELINE_DATA_DIR", "./data")
+    cloud_url = args.cloud_url or os.environ.get("CLOUD_URL", "http://127.0.0.1:8000").rstrip("/")
+
+    if from_source == "device":
+        wal = SegmentedWAL(data_dir)
+        ledger = LossLedger(data_dir)
+
+        # 1. Output one line per sample
+        for sample in wal.iter_samples(session_id=session_id):
+            s_out = {
+                "sensor": sample["sensor"],
+                "index": sample["index"],
+                "values": sample["values"],
+            }
+            sys.stdout.write(json.dumps(s_out) + "\n")
+
+        # 2. Followed by one line per loss
+        for loss in ledger.get_losses(session_id=session_id):
+            l_out = {
+                "sensor": loss["sensor"],
+                "from_index": loss["from_index"],
+                "to_index": loss.get("to_index"),
+                "reason": loss.get("reason", "unknown"),
+            }
+            sys.stdout.write(json.dumps(l_out) + "\n")
+
+        wal.close()
+        sys.stdout.flush()
+        return 0
+
+    elif from_source == "cloud":
+        # Fetch from cloud GET /export?session_id=...
+        url = f"{cloud_url}/export?session_id={session_id}"
+        try:
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=10.0) as resp:
+                content = resp.read().decode("utf-8")
+                sys.stdout.write(content)
+                if not content.endswith("\n"):
+                    sys.stdout.write("\n")
+                sys.stdout.flush()
+                return 0
+        except Exception as e:
+            sys.stderr.write(f"Error fetching cloud export: {e}\n")
+            return 1
+
+    return 1
+
+
+def cmd_results(args: argparse.Namespace) -> int:
+    session_id = args.session
+    data_dir = args.data_dir or os.environ.get("PIPELINE_DATA_DIR", "./data")
+    results_path = os.path.join(data_dir, "results.jsonl")
+
+    seen_windows = set()
+    if os.path.exists(results_path):
+        with open(results_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    res = json.loads(line)
+                    if res.get("session_id") == session_id:
+                        sys.stdout.write(line + "\n")
+                        seen_windows.add((res.get("window"), res.get("mode")))
+                except Exception:
+                    pass
+
+    sys.stdout.flush()
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="pipeline", description="MayaCardio Data Pipeline")
+    subparsers = parser.add_subparsers(dest="subcommand", required=True)
+
+    # run
+    p_run = subparsers.add_parser("run", help="starts ingest + processing + upload")
+    p_run.add_argument("--data-dir", default=None, help="Path to data directory")
+    p_run.add_argument("--mock-host", default=None, help="Host of biosignal-mock")
+    p_run.add_argument("--mock-port", default=None, help="Port of biosignal-mock")
+    p_run.add_argument("--cloud-url", default=None, help="URL of cloud service")
+    p_run.add_argument("--metrics-port", default=None, help="Port for /metrics server")
+
+    # status
+    p_status = subparsers.add_parser("status", help="prints pipeline status JSON line")
+    p_status.add_argument("--data-dir", default=None, help="Path to data directory")
+
+    # export
+    p_export = subparsers.add_parser("export", help="exports samples and losses as JSONL")
+    p_export.add_argument("--session", required=True, help="Session ID")
+    p_export.add_argument("--from", dest="from_source", choices=["device", "cloud"], required=True)
+    p_export.add_argument("--data-dir", default=None, help="Path to data directory")
+    p_export.add_argument("--cloud-url", default=None, help="URL of cloud service")
+
+    # results
+    p_results = subparsers.add_parser("results", help="prints window results as JSON lines")
+    p_results.add_argument("--session", required=True, help="Session ID")
+    p_results.add_argument("--data-dir", default=None, help="Path to data directory")
+
+    args = parser.parse_args()
+
+    if args.subcommand == "run":
+        return cmd_run(args)
+    elif args.subcommand == "status":
+        return cmd_status(args)
+    elif args.subcommand == "export":
+        return cmd_export(args)
+    elif args.subcommand == "results":
+        return cmd_results(args)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

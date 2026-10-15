@@ -1,0 +1,40 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.0, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\rishi\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\rishi\.gemini\antigravity-ide\scratch\mayacardio-pipeline
+plugins: anyio-4.15.1, platformdirs-4.12.4, cov-7.1.0
+collecting ... collected 31 items
+
+tests/test_cli.py::test_cli_status_initial PASSED                        [  3%]
+tests/test_cli.py::test_cli_export_from_device PASSED                    [  6%]
+tests/test_cli.py::test_cli_export_from_cloud PASSED                     [  9%]
+tests/test_cli.py::test_cli_results PASSED                               [ 12%]
+tests/test_cloud.py::test_cloud_probe PASSED                             [ 16%]
+tests/test_cloud.py::test_cloud_ingest_idempotence_and_ack PASSED        [ 19%]
+tests/test_cloud.py::test_cloud_window_computation PASSED                [ 22%]
+tests/test_cloud.py::test_cloud_export_format PASSED                     [ 25%]
+tests/test_fsm_uploader.py::test_fsm_transition_rules PASSED             [ 29%]
+tests/test_fsm_uploader.py::test_uploader_catchup_after_outage PASSED    [ 32%]
+tests/test_mock_client.py::test_crc_verification_logic PASSED            [ 35%]
+tests/test_mock_client.py::test_mock_client_read_and_persist PASSED      [ 38%]
+tests/test_mock_client.py::test_mock_client_corrupt_crc_retry PASSED     [ 41%]
+tests/test_mock_client.py::test_mock_client_loss_recording PASSED        [ 45%]
+tests/test_mock_client.py::test_mock_client_restart_handling PASSED      [ 48%]
+tests/test_wal.py::test_interval_index_dedupe PASSED                     [ 51%]
+tests/test_wal.py::test_wal_write_and_replay PASSED                      [ 54%]
+tests/test_wal.py::test_wal_segment_rotation PASSED                      [ 58%]
+tests/test_wal.py::test_wal_torn_tail_header_recovery PASSED             [ 61%]
+tests/test_wal.py::test_wal_torn_tail_payload_recovery PASSED            [ 64%]
+tests/test_wal.py::test_wal_corrupt_crc_tail_recovery PASSED             [ 67%]
+tests/test_wal.py::test_dedupe_rebuild_from_wal PASSED                   [ 70%]
+tests/test_wal.py::test_loss_ledger PASSED                               [ 74%]
+tests/test_window.py::test_window_complete_and_means PASSED              [ 77%]
+tests/test_window.py::test_window_missing_samples PASSED                 [ 80%]
+tests/test_window.py::test_window_all_samples_missing PASSED             [ 83%]
+tests/test_window.py::test_peak_conditions_hand_computed PASSED          [ 87%]
+tests/test_window.py::test_heart_rate_calculation_60_and_90_bpm PASSED   [ 90%]
+tests/test_window.py::test_heart_rate_no_rate_conditions PASSED          [ 93%]
+tests/test_window.py::test_ramp_mode_vector PASSED                       [ 96%]
+tests/test_window.py::test_magnitude_precision PASSED                    [100%]
+
+============================= 31 passed in 7.78s ==============================

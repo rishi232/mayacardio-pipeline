@@ -1,0 +1,42 @@
+Corrupt CRC received for sensor 1 (attempt 1), requesting re-read
+Corrupt CRC received for sensor 1 (attempt 2), requesting re-read
+=======================================================
+MayaCardio Pipeline - Comprehensive Failure Test Runner
+=======================================================
+
+=======================================================
+RUNNING FAILURE TEST: 1. Corrupt CRC-32 Injection & Re-read Verification
+=======================================================
+PASS: Corrupt CRC rejected, re-read succeeded, no corrupt data stored.
+
+=======================================================
+RUNNING FAILURE TEST: 2. Duplicate Replies & Deduplication Verification
+=======================================================
+PASS: 20 unique samples persisted, duplicates filtered out.
+
+=======================================================
+RUNNING FAILURE TEST: 3. Sensor Stoppage & LossLedger Verification
+=======================================================
+PASS: Loss accurately recorded in append-only LossLedger.
+
+=======================================================
+RUNNING FAILURE TEST: 4. Mock Restart & Old Session Loss Recording (to_index=None)
+=======================================================
+PASS: Session restart detected; unread data recorded with to_index: null.
+
+=======================================================
+RUNNING FAILURE TEST: 5. Network Cut & Switch <= 10s Verification
+=======================================================
+Online confirmed.
+Switched ONLINE -> OFFLINE in 2.29s (<= 10s constraint met).
+Switched OFFLINE -> ONLINE in 0.40s (<= 10s constraint met).
+PASS: Bidirectional mode switch completed well within 10 seconds.
+
+=======================================================
+RUNNING FAILURE TEST: 6. Process Crash & Torn Tail Recovery Verification
+=======================================================
+PASS: WAL recovered from torn tail record without loss of prior valid samples.
+
+=======================================================
+ALL 6 FAILURE INJECTION TESTS PASSED CLEANLY (100% SUCCESS)!
+=======================================================
