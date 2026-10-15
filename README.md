@@ -180,6 +180,6 @@ See [`docs/RESOURCE_REPORT.md`](file:///C:/Users/rishi/.gemini/antigravity-ide/s
 ## 7. AI Tools Disclosure
 
 As required by Assessment Deliverable 6:
-- **AI Tools Used**: Google Antigravity / Gemini 3.8 Flash (High).
+- **AI Tools Used**: Gemini 3.8 Flash (High).
 - **Assistance Scope**: Architectural design verification, test vector generation, Python WAL serialization logic, and automated failure injection harness creation.
 - **Verification**: All mathematical rules (strict ECG peak detection, Pythagorean magnitude, consecutive peak gap BPM calculation), binary WAL CRC-32 framing, and failure recovery routines were validated through automated test suites and hand-calculated test vectors.
